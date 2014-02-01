@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
-	<classpathentry kind="lib" path="//userprofiles01/XDdata04/WS026610/Desktop/Downloads/google-gson-2.2.4-release/google-gson-2.2.4/gson-2.2.4.jar"/>
-	<classpathentry kind="lib" path="//userprofiles01/XDdata04/WS026610/Desktop/Downloads/google-gson-2.2.4-release/google-gson-2.2.4/gson-2.2.4-javadoc.jar"/>
-	<classpathentry kind="output" path="bin"/>
+  <classpathentry kind="output" path="target/classes"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="var" path="M2_REPO/org/jsoup/jsoup/1.7.3/jsoup-1.7.3.jar" sourcepath="M2_REPO/org/jsoup/jsoup/1.7.3/jsoup-1.7.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/C:/_repository/org/jsoup/jsoup/1.7.3/jsoup-1.7.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
 </classpath>

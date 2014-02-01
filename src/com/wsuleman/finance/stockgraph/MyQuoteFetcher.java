@@ -15,9 +15,13 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.regex.Pattern;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import org.jsoup.Jsoup;
+import org.jsoup.helper.Validate;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class MyQuoteFetcher {
 	
@@ -26,13 +30,15 @@ public class MyQuoteFetcher {
         try {
             URL ulr = new URL("http://en.wikipedia.org/w/index.php?title=List_of_S%26P_500_companies&action=edit&section=1");
             URLConnection urlConnection = ulr.openConnection();
-            BufferedReader reader = null;
-	        reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            //= new BufferedReader(new InputStreamReader(url.openStream()));
 	        String inputLine;
 	        while ((inputLine = reader.readLine()) != null) {
-		        System.out.println(inputLine);
-	        	extractSymbolsFromLine(inputLine, symbols);
-	            break;  
+		        if(inputLine.length() > 0  && inputLine.charAt(0) == '|'){
+			        //System.out.println(inputLine);
+		        	extractSymbolsFromLine(inputLine, symbols);
+		        }
+	            //break;  
 	        }
 	        
 			File file = new File("C:/temp.dat");
@@ -48,7 +54,7 @@ public class MyQuoteFetcher {
 		    Iterator it = symbols.entrySet().iterator();
 		    while (it.hasNext()) {
 		        Map.Entry pairs = (Map.Entry)it.next();
-		        System.out.println(pairs.getKey() + " = " + pairs.getValue());
+		        //System.out.println(pairs.getKey() + " = " + pairs.getValue());
 
 				bw.write(pairs.getKey() + "," + pairs.getValue() + "\n");
 		        it.remove(); // avoids a ConcurrentModificationException
@@ -63,26 +69,32 @@ public class MyQuoteFetcher {
 		}
 	}
 	
-	public void extractSymbolsFromLine(String line, Map<String, String> symbols){		
-		if(line.length() > 0){
+	public void extractSymbolsFromLine(String line, Map<String, String> symbols){	
+
+		if(line.length() == 0){
 			return;
 		}
 		
 		if(line.trim().equals("|-")){
 			return;
 		}
-		
 		line = line.substring(2);
 		
-		String[] cols = line.split("||");
+		String[] cols = line.split(Pattern.quote("||"));
 		String symbol, company;
 		symbol = cols[0].trim();
+		System.out.println(symbol);
 		company = cols[1].trim();
+		System.out.println(line);
 		
+		for(int i = 0; i < cols.length; i++){
+			System.out.println(cols[i]);
+		}
+		//System.out.println(company);
 		symbol = symbol.substring(symbol.lastIndexOf('|'), symbol.length()-2);
 		company = company.substring(2, company.length()-2);
 		symbols.put(symbol, company);
-		
+		System.out.println(symbol + " " + company);
 		return;
 	}
 }
