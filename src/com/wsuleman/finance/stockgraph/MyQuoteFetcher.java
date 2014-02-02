@@ -1,7 +1,5 @@
 package com.wsuleman.finance.stockgraph;
 
-import info.obba.datatools.web.MarketDataBean;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -10,91 +8,152 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.regex.Pattern;
-
-import org.jsoup.Jsoup;
-import org.jsoup.helper.Validate;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 public class MyQuoteFetcher {
+	private static Map<String, MarketDataBean> stocks = new HashMap<String, MarketDataBean>();
+	private StringBuffer stockBuffer = new StringBuffer();
+	private long updateIntervall;
 	
-	public void getSymbolsSP500(String url){
-		Map<String,String> symbols = new HashMap<String,String>();
+	public MyQuoteFetcher(List<String> symbols, double updateIntervallInSeconds){
+	    super();
+	    this.updateIntervall = (long)(updateIntervallInSeconds * 1000.0);
+	    this.downloadData(symbols, 20);
+	}
+
+	public MarketDataBean getData(String symbol) throws IOException
+	{
+		updateData(symbol);
+		return stocks.get(symbol);
+	}
+	
+	public void downloadData(List<String> symbols, int downloadIteration){
+		// Check if we need to update
+		StringBuffer symbolBuffer = new StringBuffer();
+		
+		System.out.println("Downloading stock data");
+
+		stockBuffer = new StringBuffer();
+		for(int i = 0; i < symbols.size(); i++){
+			
+			symbolBuffer.append(symbols.get(i));
+			
+			if(i < (symbols.size()-1)){
+				if(i % downloadIteration == 0 && i != 0){
+					downloadData(symbolBuffer.toString());
+					symbolBuffer = new StringBuffer();
+				} else {
+					symbolBuffer.append("+");
+				}
+			}
+		}
+
+		downloadData(symbolBuffer.toString());
+		symbolBuffer = new StringBuffer();
+        writeToFile(stockBuffer.toString());
+	}
+	
+	public synchronized void downloadData(String symbols){
+
+		/*
+		 * Fetch CSV data from Yahoo. The format codes (f=) are:
+		 * s=symbol, l1 = last, c1 = change, d1 = trade day, t1 = trade time, o = open, h = high, g = low, v = volume
+		 */
+		MarketDataBean stockInfo = new MarketDataBean();
         try {
-            URL ulr = new URL("http://en.wikipedia.org/w/index.php?title=List_of_S%26P_500_companies&action=edit&section=1");
+			System.out.println(symbols);
+			
+        	URL ulr = new URL("http://finance.yahoo.com/d/quotes.csv?s=" + symbols + "&f=sl1c1vd1t1ohg&e=.csv");
             URLConnection urlConnection = ulr.openConnection();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-            //= new BufferedReader(new InputStreamReader(url.openStream()));
+            BufferedReader reader = null;
+	        reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 	        String inputLine;
 	        while ((inputLine = reader.readLine()) != null) {
-		        if(inputLine.length() > 0  && inputLine.charAt(0) == '|'){
-			        //System.out.println(inputLine);
-		        	extractSymbolsFromLine(inputLine, symbols);
-		        }
-	            //break;  
+	        	stockBuffer.append(inputLine);
+	        	stockBuffer.append("\n");
+	        	
+	            String[] yahooStockInfo = inputLine.split(",");
+	            stockInfo = new MarketDataBean();
+	            stockInfo.setSymbol(yahooStockInfo[0].replaceAll("\"", ""));
+	            stockInfo.setPrice(stringToDouble(yahooStockInfo[1]));
+	            stockInfo.setChange(stringToDouble(yahooStockInfo[2]));
+	            stockInfo.setVolume(stringToDouble(yahooStockInfo[3]));
+	            stockInfo.setLastUpdated(System.currentTimeMillis());
+	            stocks.put(stockInfo.getSymbol(), stockInfo);
 	        }
-	        
-			File file = new File("C:/temp.dat");
- 
+            if(reader != null){ 
+            	reader.close();
+            }
+        } catch(Exception e){
+        	e.printStackTrace();
+        	System.out.println(stockInfo);
+        } 
+	}
+	
+	private double stringToDouble(String str){
+		if(str.trim().equals("N/A")){
+			return 0;
+		}
+		return Double.valueOf(str);
+	}
+	
+	private void writeToFile(String stocks){
+		try{
+			String filePath = "C:/tempStock.csv";
+			System.out.println("Writing to file");
+			File file = new File(filePath);
+	
 			// if file doesnt exists, then create it
 			if (!file.exists()) {
+				System.out.println("Created file");
 				file.createNewFile();
 			}
- 
+	
 			FileWriter fw = new FileWriter(file.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
 			
-		    Iterator it = symbols.entrySet().iterator();
-		    while (it.hasNext()) {
-		        Map.Entry pairs = (Map.Entry)it.next();
-		        //System.out.println(pairs.getKey() + " = " + pairs.getValue());
-
-				bw.write(pairs.getKey() + "," + pairs.getValue() + "\n");
-		        it.remove(); // avoids a ConcurrentModificationException
-		    }
-		    
+			
+			bw.write(stocks);
 			bw.close();
- 
-			System.out.println("Done");
-			reader.close();
+	
+			System.out.println("Done writing to file:" + stocks);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public void extractSymbolsFromLine(String line, Map<String, String> symbols){	
+	public synchronized void updateData(String symbol) throws IOException {
+		
+		// Check if we need to update
+		MarketDataBean dataBean = stocks.get(symbol);
+		if(dataBean != null && System.currentTimeMillis() - dataBean.getLastUpdated() < updateIntervall) return;
 
-		if(line.length() == 0){
-			return;
-		}
-		
-		if(line.trim().equals("|-")){
-			return;
-		}
-		line = line.substring(2);
-		
-		String[] cols = line.split(Pattern.quote("||"));
-		String symbol, company;
-		symbol = cols[0].trim();
-		System.out.println(symbol);
-		company = cols[1].trim();
-		System.out.println(line);
-		
-		for(int i = 0; i < cols.length; i++){
-			System.out.println(cols[i]);
-		}
-		//System.out.println(company);
-		symbol = symbol.substring(symbol.lastIndexOf('|'), symbol.length()-2);
-		company = company.substring(2, company.length()-2);
-		symbols.put(symbol, company);
-		System.out.println(symbol + " " + company);
-		return;
-	}
+		/*
+		 * Fetch CSV data from Yahoo. The format codes (f=) are:
+		 * s=symbol, l1 = last, c1 = change, d1 = trade day, t1 = trade time, o = open, h = high, g = low, v = volume
+		 */
+        URL ulr = new URL("http://finance.yahoo.com/d/quotes.csv?s=" + symbol + "&f=sl1c1vd1t1ohg&e=.csv");
+        URLConnection urlConnection = ulr.openConnection();
+        BufferedReader reader = null;
+        try {
+	        reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+	        String inputLine;
+	        while ((inputLine = reader.readLine()) != null) {
+	            String[] yahooStockInfo = inputLine.split(",");
+	            MarketDataBean stockInfo = new MarketDataBean();
+	            stockInfo.setSymbol(yahooStockInfo[0].replaceAll("\"", ""));
+	            stockInfo.setPrice(Double.valueOf(yahooStockInfo[1]));
+	            stockInfo.setChange(Double.valueOf(yahooStockInfo[2]));
+	            stockInfo.setVolume(Double.valueOf(yahooStockInfo[3]));
+	            stockInfo.setLastUpdated(System.currentTimeMillis());
+	            stocks.put(symbol, stockInfo);  
+	            break;  
+	        }
+        }
+        finally {
+            if(reader != null) reader.close();
+        }
+     }
 }
