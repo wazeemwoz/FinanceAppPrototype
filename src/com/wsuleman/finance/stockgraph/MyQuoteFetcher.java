@@ -16,9 +16,11 @@ public class MyQuoteFetcher {
 	private static Map<String, MarketDataBean> stocks = new HashMap<String, MarketDataBean>();
 	private StringBuffer stockBuffer = new StringBuffer();
 	private long updateIntervall;
+	private String stockOutputFilename = "C:/tempStock.csv";
 	
-	public MyQuoteFetcher(List<String> symbols, double updateIntervallInSeconds){
+	public MyQuoteFetcher(List<String> symbols, double updateIntervallInSeconds, String stockOutputFilename){
 	    super();
+	    this.stockOutputFilename = stockOutputFilename;
 	    this.updateIntervall = (long)(updateIntervallInSeconds * 1000.0);
 	    this.downloadData(symbols, 20);
 	}
@@ -99,11 +101,10 @@ public class MyQuoteFetcher {
 		return Double.valueOf(str);
 	}
 	
-	private void writeToFile(String stocks){
+	private void writeToFile(String stocks ){
 		try{
-			String filePath = "C:/tempStock.csv";
 			System.out.println("Writing to file");
-			File file = new File(filePath);
+			File file = new File(stockOutputFilename);
 	
 			// if file doesnt exists, then create it
 			if (!file.exists()) {

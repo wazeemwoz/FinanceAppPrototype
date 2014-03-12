@@ -20,7 +20,7 @@ public class SP500SymbolFetcher extends SymbolLoader {
 	public SP500SymbolFetcher(String filePath){
 		symbols = new ArrayList<String>();
 		if(isSymbolsOutOfDate(filePath)){
-			System.out.println("File is out of date, downloading symbosl from : " + wikiUrl);
+			System.out.println("File is out of date, downloading symbols from : " + wikiUrl);
 			symbols = downloadFromWikipedia(filePath);
 		    writeSymbolsToFile(symbols, filePath);
 		} else {
